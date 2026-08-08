@@ -13,9 +13,10 @@ Implementar un pipeline que no solo compile y empaquete la aplicación, sino que
 
 ## Arquitectura del pipeline
 
-Workflow: [`.github/workflows/security-pipeline.yml`](.github/workflows/security-pipeline.yml)
-
-Se dispara automáticamente en cada `push` a cualquier rama y en cada `pull_request` hacia `main`.
+Los controles viven en dos workflows:
+[`.github/workflows/ci-security.yml`](.github/workflows/ci-security.yml) (build y tests) y
+[`.github/workflows/codeql.yml`](.github/workflows/codeql.yml) (SAST). Se disparan
+automáticamente en cada `push` y en cada `pull_request` hacia `main`.
 
 ```mermaid
 flowchart LR
@@ -37,6 +38,66 @@ flowchart LR
 
 ### 2. SAST — CodeQL
 
+Análisis estático del código fuente Java con [CodeQL](https://codeql.github.com/).
+Workflow: [`.github/workflows/codeql.yml`](.github/workflows/codeql.yml).
+
+#### Alcance
+
+CodeQL analiza **22 de 34** ficheros Java: los 23 de `src/main` (menos `package-info.java`,
+sin código extraíble) y **ninguno** de `src/test`. Es intencional — `compile` solo abarca
+`src/main`; incluir los tests requeriría `test-compile`. Se excluyen porque el código de test
+no se despliega y genera ruido en un SAST.
+
+#### Validación de la detección (vulnerabilidad forzada)
+
+Para comprobar que el análisis realmente detecta, se introdujo **a propósito** una
+vulnerabilidad conocida en `OwnerController` (commit `30bf23b`): un endpoint que leía un
+fichero a partir de un parámetro HTTP sin sanear.
+
+```java
+@GetMapping("/owners/report")
+@ResponseBody
+public String downloadReport(@RequestParam String name) throws IOException {
+    File report = new File(REPORTS_DIR, name);           // name llega sin validar
+    return new String(Files.readAllBytes(report.toPath()), StandardCharsets.UTF_8);
+}
+```
+
+Una petición como `/owners/report?name=../../../../etc/passwd` escapa del directorio base y lee ficheros arbitrarios del servidor.
+
+- **Hallazgo:** `java/path-injection` — *Uncontrolled data used in path expression*.
+- **Severidad:** 7.5 (**High**).
+- **Resultado:** CodeQL la reportó correctamente. Una vez confirmada la detección, la vulnerabilidad se **revirtió por completo** (commit `c143519`).
+
+#### Vulnerabilidad real encontrada y corregida
+
+Además de la forzada, CodeQL detectó una vulnerabilidad **preexistente** en el proyecto:
+
+- **Hallazgo:** `java/spring-boot-exposed-actuators-config` — *Exposed Spring Boot actuators
+  in configuration file*.
+- **Severidad:** 6.5 (**Medium**).
+- **Causa:** [`application.properties`](src/main/resources/application.properties) tenía
+  `management.endpoints.web.exposure.include=*`, que expone **todos** los endpoints de
+  actuator sin autenticación (`/actuator/env`, `/heapdump`, `/beans`…), con riesgo de fuga de
+  información.
+
+El primer intento (commit `f444405`) cambió el valor a `health,info`. Es correcto en
+seguridad, **pero la alerta no se cerró**: el query compara el valor como string literal
+(`not ep.getValue() = ["health", "info"]`, que solo acepta exactamente `health` o exactamente
+`info`), y no reconoce la lista separada por comas. La corrección definitiva (commit `98503b4`)
+fue **eliminar la propiedad**: sin exposición explícita, Spring Boot 2.x usa su default seguro
+(solo `health`/`info`) y el query deja de disparar.
+
+> **Aprendizaje.** Un SAST puede seguir marcando código que es seguro en la práctica porque
+> razona sobre patrones literales, no sobre semántica. Las salidas son tres: ajustar el código
+> al patrón que la regla reconoce (lo aplicado aquí), *dismiss* manual justificado, o añadir
+> `spring-boot-starter-security` (que el query también acepta como mitigación).
+
+#### Dónde ver los resultados
+
+Los hallazgos se publican en
+**[Security → Code scanning](https://github.com/daedov/pet-clinic/security/code-scanning)**.
+La vista filtra por rama (`branch:`); las alertas corregidas quedan como *Closed / Fixed*.
 
 ### 3. SCA — OWASP Dependency-Check
 
