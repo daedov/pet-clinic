@@ -40,7 +40,7 @@ jobs:
         languages: ${{ matrix.language }}
         build-mode: manual
 
-    - name: Compilar con Maven
+    - name: Compilar con Maven # solo abarca src/main, los tests quedan fuera del análisis 
       run: ./mvnw -B -ntp clean compile
 
     - name: Perform CodeQL Analysis
