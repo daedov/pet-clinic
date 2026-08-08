@@ -93,11 +93,28 @@ fue **eliminar la propiedad**: sin exposición explícita, Spring Boot 2.x usa s
 > al patrón que la regla reconoce (lo aplicado aquí), *dismiss* manual justificado, o añadir
 > `spring-boot-starter-security` (que el query también acepta como mitigación).
 
+#### Quality gate: bloqueo del pipeline
+
+Por defecto el paso `analyze` de CodeQL **nunca falla** y publica los hallazgos en Code scanning. Para que el pipeline **bloquee** ante vulnerabilidades se añadió un paso de _quality gate_ (commit `8de27c8`): `analyze` escribe el SARIF a disco (`output: sarif-results`,
+sin dejar de subirlo con `upload: always`) y un paso posterior lo evalúa con `jq`.
+
+CodeQL asigna a cada regla un valor `security-severity`. El gate rompe el build si algún hallazgo iguala o supera el umbral:
+
+| `security-severity` | Nivel | ¿Bloquea? |
+|---|---|---|
+| 9.0 – 10.0 | Critical | ✅ |
+| 7.0 – 8.9 | High | ✅ |
+| 4.0 – 6.9 | Medium | ✅ |
+| 0.1 – 3.9 | Low | ❌ |
+
+El umbral es una variable del step (`THRESHOLD=4.0`): subirlo a `7.0` bloquea solo High/Critical, `9.0` solo Critical.
+
 #### Dónde ver los resultados
 
 Los hallazgos se publican en
 **[Security → Code scanning](https://github.com/daedov/pet-clinic/security/code-scanning)**.
 La vista filtra por rama (`branch:`); las alertas corregidas quedan como *Closed / Fixed*.
+
 
 ### 3. SCA — OWASP Dependency-Check
 
