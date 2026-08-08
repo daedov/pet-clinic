@@ -47,3 +47,21 @@ jobs:
       uses: github/codeql-action/analyze@v4
       with:
         category: "/language:${{ matrix.language }}"
+        output: sarif-results     # escribe el SARIF a disco
+        upload: always            # y lo sigue publicando en Code scanning
+
+    - name: Quality gate SAST # falla si hay medium o superior
+      run: |
+        SARIF=sarif-results/java.sarif
+        THRESHOLD=4.0
+        n=$(jq --argjson t "$THRESHOLD" '
+          [ (.runs[].tool.driver.rules // []),
+            (.runs[].tool.extensions[]?.rules // []) ] | add
+          | map(select((.properties["security-severity"] // "0" | tonumber) >= $t) | .id) as $bad
+          | [ .runs[].results[] | select(.ruleId as $id | $bad | index($id)) ] | length
+        ' "$SARIF")
+        echo "Hallazgos SAST con severidad >= Medium: $n"
+        if [ "$n" -gt 0 ]; then
+          echo "::error::Quality gate SAST: $n hallazgo(s) de severidad Medium o superior"
+          exit 1
+        fi
