@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   build-and-test:
+    name: Setup, Build and Test
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -64,9 +65,11 @@ jobs:
         uses: dependency-check/Dependency-Check_Action@main
         with:
           project: spring-petclinic
-          path: 'app'               
-          format: 'HTML,SARIF,JSON'
-          args: --enableRetired
+          path: 'app'                  
+          # El CLI no acepta formatos separados por coma en un solo valor:
+          # HTML aqui (informe legible) y SARIF via --format en args (Code scanning).
+          format: 'HTML'
+          args: --enableRetired --format SARIF
 
       - name: Upload SCA report
         if: always()
