@@ -15,10 +15,6 @@
  */
 package org.springframework.samples.petclinic.owner;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
 
@@ -37,7 +33,6 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
 /**
@@ -50,8 +45,6 @@ import org.springframework.web.servlet.ModelAndView;
 class OwnerController {
 
 	private static final String VIEWS_OWNER_CREATE_OR_UPDATE_FORM = "owners/createOrUpdateOwnerForm";
-
-	private static final String REPORTS_DIR = "/var/petclinic/reports";
 
 	private final OwnerRepository owners;
 
@@ -91,20 +84,6 @@ class OwnerController {
 	public String initFindForm(Map<String, Object> model) {
 		model.put("owner", new Owner());
 		return "owners/findOwners";
-	}
-
-	/**
-	 * VULNERABILIDAD TEMPORAL - solo para probar el quality gate del pipeline. El
-	 * parametro HTTP llega sin sanear hasta la lectura del fichero, asi que
-	 * /owners/report?name=../../../../etc/passwd lee ficheros arbitrarios. CodeQL debe
-	 * marcarlo como java/path-injection (7.5, High) y el gate debe romper el build. Se
-	 * revierte tras la prueba.
-	 */
-	@GetMapping("/owners/report")
-	@ResponseBody
-	public String downloadReport(@RequestParam String name) throws IOException {
-		File report = new File(REPORTS_DIR, name);
-		return new String(Files.readAllBytes(report.toPath()), StandardCharsets.UTF_8);
 	}
 
 	@GetMapping("/owners")
