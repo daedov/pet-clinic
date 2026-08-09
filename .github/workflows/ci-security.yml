@@ -36,14 +36,14 @@ jobs:
         with:
           name: reportes-test
           path: target/surefire-reports/
-          retention-days: 7
+          retention-days: 1
 
       - name: Upload Artifact 
         uses: actions/upload-artifact@v4
         with:
           name: app-jar
           path: target/*.jar
-          retention-days: 7
+          retention-days: 1
 
   sca:
     name: SCA (OWASP Dependency-Check)
@@ -61,15 +61,13 @@ jobs:
           name: app-jar
           path: app
 
-      - name: OWASP Dependency-Check (report-only)
+      - name: OWASP Dependency-Check (quality gate)
         uses: dependency-check/Dependency-Check_Action@main
         with:
           project: spring-petclinic
-          path: 'app'                  
-          # El CLI no acepta formatos separados por coma en un solo valor:
-          # HTML aqui (informe legible) y SARIF via --format en args (Code scanning).
+          path: 'app'
           format: 'HTML'
-          args: --enableRetired --format SARIF
+          args: --enableRetired --format SARIF --failOnCVSS 4 --nvdApiKey ${{ secrets.NVD_API_KEY }}
 
       - name: Upload SCA report
         if: always()
@@ -77,7 +75,7 @@ jobs:
         with:
           name: sca-report
           path: reports
-          retention-days: 7
+          retention-days: 1
 
       - name: Upload SARIF to Code scanning
         if: always()
