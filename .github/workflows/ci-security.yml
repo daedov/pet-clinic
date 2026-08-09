@@ -82,5 +82,54 @@ jobs:
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: reports/dependency-check-report.sarif
-          category: sca        
+          category: sca
+
+  image:
+    name: Build & Security Image (Trivy)
+    runs-on: ubuntu-latest
+    needs: [build-and-test, sca]
+    if: ${{ !cancelled() && needs.build-and-test.result == 'success' }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download build jar
+        uses: actions/download-artifact@v4
+        with:
+          name: app-jar
+          path: target
+
+      - name: Build Docker image
+        run: docker build -t spring-petclinic:${{ github.sha }} .
+
+      - name: Trivy (report-only)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: spring-petclinic:${{ github.sha }}
+          scan-type: image
+          format: sarif
+          output: trivy-results.sarif
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: '0'
+
+      - name: Upload Trivy SARIF to Code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-results.sarif
+          category: image
+
+      - name: Trivy (table)
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: spring-petclinic:${{ github.sha }}
+          scan-type: image
+          format: table
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: '0'
 
