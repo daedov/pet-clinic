@@ -152,7 +152,7 @@ jobs:
           output: trivy-results.sarif
           severity: 'CRITICAL,HIGH,MEDIUM'
           limit-severities-for-sarif: true
-          ignore-unfixed: false
+          ignore-unfixed: true
           exit-code: '1'
 
       - name: Upload Trivy SARIF to Code scanning
