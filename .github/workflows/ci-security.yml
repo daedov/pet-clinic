@@ -84,11 +84,38 @@ jobs:
           sarif_file: reports/dependency-check-report.sarif
           category: sca
 
+  dockerfile:
+    name: Dockerfile audit (Trivy config)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Trivy config (report-only)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: config
+          scan-ref: Dockerfile
+          format: sarif
+          output: trivy-config-results.sarif
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: '0'
+
+      - name: Upload Trivy config SARIF to Code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-config-results.sarif
+          category: dockerfile
+
   image:
     name: Build & Security Image (Trivy)
     runs-on: ubuntu-latest
     needs: [build-and-test, sca]
-    if: ${{ !cancelled() && needs.build-and-test.result == 'success' }}
     timeout-minutes: 20
     permissions:
       contents: read
