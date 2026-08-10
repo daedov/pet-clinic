@@ -71,7 +71,7 @@ jobs:
           project: spring-petclinic
           path: 'app'
           format: 'HTML'
-          args: --enableRetired --format SARIF --failOnCVSS 4 --nvdApiKey ${{ secrets.NVD_API_KEY }}
+          args: --enableRetired --format SARIF --failOnCVSS 4
 
       - name: Upload SCA report
         if: always()
