@@ -64,8 +64,6 @@ jobs:
           path: app
 
       - name: OWASP Dependency-Check (quality gate)
-        # TEMPORAL: el job concluye OK aunque el gate falle, para que corra el job image
-        continue-on-error: true
         uses: dependency-check/Dependency-Check_Action@1e54355a8b4c8abaa8cc7d0b70aa655a3bb15a6c
         with:
           project: spring-petclinic
