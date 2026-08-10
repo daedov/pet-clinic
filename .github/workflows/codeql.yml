@@ -42,31 +42,40 @@ jobs:
         languages: ${{ matrix.language }}
         build-mode: manual
 
-    - name: Compilar con Maven # solo abarca src/main, los tests quedan fuera del análisis 
+    - name: Compilar con Maven
       run: ./mvnw -B -ntp clean compile
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@5595ccaf912efad79be6eef63a5619ff05969be3 # v4
       with:
         category: "/language:${{ matrix.language }}"
-        output: sarif-results     # escribe el SARIF a disco
-        upload: always            # y lo sigue publicando en Code scanning
+        output: sarif-results   
+        upload: always           
 
-    - name: Quality gate SAST # falla si hay medium o superior
+    - name: Quality gate SAST
       run: |
         set -o pipefail
-        SARIF=$(ls sarif-results/*.sarif | head -1)
-        echo "SARIF: $SARIF (raiz: $(jq -r type "$SARIF"))"
+        shopt -s nullglob
         THRESHOLD=4.0
-        n=$(jq --argjson t "$THRESHOLD" '
-          [ .. | objects | select(.properties?."security-severity" != null)
-            | select((.properties."security-severity" | tonumber) >= $t) | .id ] as $bad
-          | [ .. | objects | select(.ruleId != null) | .ruleId
-              | select(. as $x | ($bad | index($x)) != null) ]
-          | length
-        ' "$SARIF")
-        echo "Hallazgos SAST con severidad >= Medium: $n"
-        if [ "${n:-0}" -gt 0 ]; then
-          echo "::error::Quality gate SAST: $n hallazgo(s) de severidad Medium o superior"
+        total=0
+        files=(sarif-results/*.sarif)
+        if [ ${#files[@]} -eq 0 ]; then
+          echo "::error::No se encontro ningun SARIF en sarif-results/"
+          exit 1
+        fi
+        for SARIF in "${files[@]}"; do
+          n=$(jq --argjson t "$THRESHOLD" '
+            [ .. | objects | select(.properties?."security-severity" != null)
+              | select((.properties."security-severity" | tonumber) >= $t) | .id ] as $bad
+            | [ .. | objects | select(.ruleId != null) | .ruleId
+                | select(. as $x | ($bad | index($x)) != null) ]
+            | length
+          ' "$SARIF")
+          echo "$SARIF: $n hallazgo(s) >= Medium"
+          total=$((total + n))
+        done
+        echo "Hallazgos SAST con severidad >= Medium: $total"
+        if [ "${total:-0}" -gt 0 ]; then
+          echo "::error::Quality gate SAST: $total hallazgo(s) de severidad Medium o superior"
           exit 1
         fi
