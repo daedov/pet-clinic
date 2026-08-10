@@ -153,14 +153,3 @@ jobs:
         with:
           sarif_file: trivy-results.sarif
           category: image
-
-      - name: Trivy (table)
-        if: always()
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: spring-petclinic:${{ github.sha }}
-          scan-type: image
-          format: table
-          severity: 'CRITICAL,HIGH,MEDIUM'
-          exit-code: '0'
-
