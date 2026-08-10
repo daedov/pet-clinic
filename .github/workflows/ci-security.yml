@@ -82,7 +82,7 @@ jobs:
           project: spring-petclinic
           path: 'app'
           format: 'HTML'
-          args: --enableRetired --format SARIF --failOnCVSS 4
+          args: --enableRetired --disableCentral --format SARIF --failOnCVSS 4
 
       - name: Upload SCA report
         if: always()
