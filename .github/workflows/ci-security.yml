@@ -109,6 +109,7 @@ jobs:
           format: sarif
           output: trivy-config-results.sarif
           severity: 'CRITICAL,HIGH,MEDIUM'
+          limit-severities-for-sarif: true
           exit-code: '0'
 
       - name: Upload Trivy config SARIF to Code scanning
@@ -150,6 +151,7 @@ jobs:
           format: sarif
           output: trivy-results.sarif
           severity: 'CRITICAL,HIGH,MEDIUM'
+          limit-severities-for-sarif: true
           ignore-unfixed: false
           exit-code: '1'
 
