@@ -106,15 +106,17 @@ jobs:
       - name: Build Docker image
         run: docker build -t spring-petclinic:${{ github.sha }} .
 
-      - name: Trivy (report-only)
+      - name: Trivy (quality gate)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: spring-petclinic:${{ github.sha }}
           scan-type: image
+          vuln-type: 'os'
           format: sarif
           output: trivy-results.sarif
           severity: 'CRITICAL,HIGH,MEDIUM'
-          exit-code: '0'
+          ignore-unfixed: false
+          exit-code: '1'
 
       - name: Upload Trivy SARIF to Code scanning
         if: always()
