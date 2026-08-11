@@ -33,13 +33,11 @@ flowchart LR
 | Job | `push` | `pull_request → main` | `schedule` |
 |---|---|---|---|
 | `build-and-test`, `dockerfile` | cualquier rama | ✔ | lunes 06:00 UTC |
-| `sca` | `main` y `feature-pipeline` | ✔ | lunes 06:00 UTC |
-| `image` | solo `main` | ✔ | lunes 06:00 UTC |
+| `sca`, `image` | solo `main` | ✔ | lunes 06:00 UTC |
 | `sast` | solo `main` | ✔ | lunes 06:30 UTC |
 
 - `Schedule semanal`: el análisis por evento no detecta CVEs publicadas después del último commit.
 - `build-and-test`/`dockerfile` en todas las ramas: dan feedback temprano.
-- `sca` corre además en `feature-pipeline`, la rama de desarrollo del pipeline, para no depender de un PR al validarlo. `image` sigue acotado a `main` y a los PR.
 - `concurrency` + `cancel-in-progress` cancela runs previos de la misma rama
 - `paths-ignore` evita disparar el pipeline al editar markdown.
 
@@ -54,8 +52,6 @@ Ejecuta `./mvnw clean compile` y cubre ficheros Java de `src/main`, sin `package
 Descarga `app-jar`, resuelve dependencias contra la NVD (`--enableRetired --disableCentral`).
 
 **Gate**: el default de `--failOnCVSS` es 11 (nunca falla, CVSS máximo es 10), por eso se fija explícito en `--failOnCVSS 4`, alineado al `THRESHOLD` del SAST. `image` depende de `sca` (`needs`), así que un gate en rojo también salta la etapa 6.
-
-**`--disableCentral`**: el Central Analyzer consulta `search.maven.org` y desde los runners de GitHub choca contra el rate limit. Tras 3 reintentos lanza una excepción y Dependency-Check aborta con código distinto de cero **antes** de evaluar el umbral: un rojo que no dice nada sobre seguridad (2 de 2 runs sin el flag). Desactivarlo no cambia la detección — al fallar, la herramienta lo apaga sola y continúa; los mismos 156 hallazgos ≥ 4.0 aparecen igual, y el job baja de 1049 s a menos de 2 minutos. El costo es perder el enriquecimiento con los POM de Maven Central, que puede aumentar falsos positivos y negativos.
 
 ### 5. Build de la imagen
 Descarga `app-jar` a `target/` (`COPY target/*.jar` en el Dockerfile), construye `spring-petclinic:${{ github.sha }}`. No se publica a ningún registry — Trivy la lee del daemon local, por eso comparte job con la etapa 6. Un futuro `docker push` iría después del gate 6.
