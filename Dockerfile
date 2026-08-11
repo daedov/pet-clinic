@@ -1,5 +1,7 @@
 FROM eclipse-temurin:11-jre
 
+LABEL org.opencontainers.image.source="https://github.com/daedov/pet-clinic"
+
 RUN useradd --system --uid 10001 --create-home spring
 
 EXPOSE 8085

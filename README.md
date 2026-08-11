@@ -12,21 +12,24 @@ Dos workflows:
 flowchart LR
     CO[1. Checkout] --> BT[2. Build & Test<br/>mvnw verify]
     BT --> SCA[4. SCA<br/>Dependency-Check]
-    SCA --> IMG[5. Build imagen]
-    IMG --> TR[6. Image Security<br/>Trivy]
+    SCA --> IMG[6. Build imagen]
+    IMG --> TR[7. Image Security<br/>Trivy]
+    TR --> PUB[8. Publicacion<br/>GHCR]
     CO --> SAST[3. SAST<br/>CodeQL]
-    CO --> DF[7. Dockerfile Audit<br/>Trivy config]
+    CO --> DF[5. Dockerfile Audit<br/>Trivy config]
+    DF --> IMG
 ```
 
 | Etapa | Herramienta | Analiza | Falla si |
 |---|---|---|---|
 | 1. Checkout | `actions/checkout` | — | — |
-| 2. Build & Test | `./mvnw verify` (JDK 8, Temurin) | Compila, testea, publica `.jar` como `app-jar` | Falla compilación/test → salta etapas 4-6 |
+| 2. Build & Test | `./mvnw verify` (JDK 8, Temurin) | Compila, testea, publica `.jar` como `app-jar` | Falla compilación/test → salta etapas 4 y 6-8 |
 | 3. SAST | CodeQL | `src/main` Java | Critical/High/Medium |
 | 4. SCA | OWASP Dependency-Check | Dependencias del `.jar` | CVEs Critical/High/Medium |
-| 5. Build imagen | `docker build` | Empaqueta el `.jar` | — |
-| 6. Image Security | Trivy | Paquetes OS de la imagen | CVEs Critical/High/Medium con parche |
-| 7. Dockerfile Audit | Trivy config | Buenas prácticas del `Dockerfile` | Malas configs Critical/High/Medium |
+| 5. Dockerfile Audit | Trivy config | Buenas prácticas del `Dockerfile` | Malas configs Critical/High/Medium |
+| 6. Build imagen | `docker build` | Empaqueta el `.jar` | — |
+| 7. Image Security | Trivy | Paquetes OS de la imagen | CVEs Critical/High/Medium con parche |
+| 8. Publicación | `docker push` a GHCR | — | — |
 
 ## Triggers
 
@@ -51,12 +54,17 @@ Ejecuta `./mvnw clean compile` y cubre ficheros Java de `src/main`, sin `package
 ### 4. SCA — OWASP Dependency-Check
 Descarga `app-jar`, resuelve dependencias contra la NVD (`--enableRetired --disableCentral`).
 
-**Gate**: el default de `--failOnCVSS` es 11 (nunca falla, CVSS máximo es 10), por eso se fija explícito en `--failOnCVSS 4`, alineado al `THRESHOLD` del SAST. `image` depende de `sca` (`needs`), así que un gate en rojo también salta la etapa 6.
+**Gate**: el default de `--failOnCVSS` es 11 (nunca falla, CVSS máximo es 10), por eso se fija explícito en `--failOnCVSS 4`, alineado al `THRESHOLD` del SAST. `image` depende de `sca` (`needs`), así que un gate en rojo salta las etapas 6 a 8.
 
-### 5. Build de la imagen
-Descarga `app-jar` a `target/` (`COPY target/*.jar` en el Dockerfile), construye `spring-petclinic:${{ github.sha }}`. No se publica a ningún registry — Trivy la lee del daemon local, por eso comparte job con la etapa 6. Un futuro `docker push` iría después del gate 6.
+### 5. Dockerfile Audit — Trivy config
+Evalúa el `Dockerfile` contra políticas, no CVEs. En estos checks, "≥ Medium" equivale en la práctica a *todo menos LOW*. Job sin `needs`: corre en paralelo desde el minuto uno, sin esperar al build.
 
-### 6. Image Security — Trivy
+**Gate** (`exit-code: '1'`): cualquier hallazgo sobre el umbral convierte el escaneo en fallo del step, y `severity` + `limit-severities-for-sarif` fijan ese umbral. El SARIF se publica igual porque el upload lleva `if: always()`. `image` lo declara en sus `needs`, así que una mala configuración impide construir, escanear y publicar la imagen — auditar la receta antes de usarla.
+
+### 6. Build de la imagen
+Descarga `app-jar` a `target/` (`COPY target/*.jar` en el Dockerfile), construye `spring-petclinic:${{ github.sha }}`. Trivy la lee del daemon local, por eso el build comparte job con las etapas 7 y 8: separarlas obligaría a mover cientos de megabytes entre runners.
+
+### 7. Image Security — Trivy
 Cubre lo que otros jobs no ven: paquetes OS de la imagen base.
 
 | Parámetro | Efecto |
@@ -68,10 +76,12 @@ Cubre lo que otros jobs no ven: paquetes OS de la imagen base.
 
 **Gate** (`exit-code: '1'`): un hallazgo sobre el umbral falla el step y con él el job, así que la imagen queda construida pero nunca llega a publicarse. El SARIF se sube igual por el `if: always()`.
 
-### 7. Dockerfile Audit — Trivy config
-Evalúa el `Dockerfile` contra políticas, no CVEs. En estos checks, "≥ Medium" equivale en la práctica a *todo menos LOW*. Job independiente sin `needs`, corre en paralelo desde el minuto uno. Como ningún job declara `needs: dockerfile`, el fallo no salta etapas, solo marca el run en rojo.
+### 8. Publicación — GHCR
+`docker push` a `ghcr.io/daedov/pet-clinic`, etiquetada con el SHA del commit para que cada imagen apunte al código exacto que la produjo. Autentica con el `GITHUB_TOKEN` y `packages: write`; no hace falta ningún secret adicional.
 
-**Gate** (`exit-code: '1'`): cualquier hallazgo sobre el umbral convierte el escaneo en fallo del step, y `severity` + `limit-severities-for-sarif` fijan ese umbral. El SARIF se publica igual porque el upload lleva `if: always()`.
+**Por qué no necesita un gate propio**: son los últimos steps del job `image`, y un step fallido corta el job. Si el gate de Trivy rompe, el push no se ejecuta — la protección es estructural, no una condición que haya que mantener. El `if` de rama lo limita a `push` sobre `main`, así que un PR escanea pero no publica.
+
+**Límite conocido**: `needs` no cruza workflows, así que la publicación no puede depender del gate de SAST, que vive en `codeql.yml`. Se cubre haciendo que el check de CodeQL sea *required* en branch protection de `main`.
 
 ## Configuración segura del pipeline
 
