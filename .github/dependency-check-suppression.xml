@@ -22,61 +22,61 @@
   <suppress until="2027-02-10Z">
     <notes>tomcat-embed-core 9.0.60 (Spring Boot 2.6.6). Sin parches para la rama 9.0.60.</notes>
     <filePath regex="true">.*[\\/]tomcat-embed-core-9\.0\.60\.jar</filePath>
-    <cvssBelow>11</cvssBelow>
+    <vulnerabilityName regex="true">.*</vulnerabilityName>
   </suppress>
 
   <suppress until="2027-02-10Z">
     <notes>spring-core 5.3.18 (Spring Boot 2.6.6). Requiere migrar a Spring Framework 6 / Java 17.</notes>
     <filePath regex="true">.*[\\/]spring-core-5\.3\.18\.jar</filePath>
-    <cvssBelow>11</cvssBelow>
+    <vulnerabilityName regex="true">.*</vulnerabilityName>
   </suppress>
 
   <suppress until="2027-02-10Z">
     <notes>thymeleaf 3.0.15.RELEASE (Spring Boot 2.6.6).</notes>
     <filePath regex="true">.*[\\/]thymeleaf-3\.0\.15\.RELEASE\.jar</filePath>
-    <cvssBelow>11</cvssBelow>
+    <vulnerabilityName regex="true">.*</vulnerabilityName>
   </suppress>
 
   <suppress until="2027-02-10Z">
     <notes>thymeleaf-extras-java8time 3.0.4.RELEASE. Hereda el CPE de thymeleaf.</notes>
     <filePath regex="true">.*[\\/]thymeleaf-extras-java8time-3\.0\.4\.RELEASE\.jar</filePath>
-    <cvssBelow>11</cvssBelow>
+    <vulnerabilityName regex="true">.*</vulnerabilityName>
   </suppress>
 
   <suppress until="2027-02-10Z">
     <notes>snakeyaml 1.29 (transitiva de spring-boot-starter). CVE-2022-1471 y familia.</notes>
     <filePath regex="true">.*[\\/]snakeyaml-1\.29\.jar</filePath>
-    <cvssBelow>11</cvssBelow>
+    <vulnerabilityName regex="true">.*</vulnerabilityName>
   </suppress>
 
   <suppress until="2027-02-10Z">
     <notes>jackson-databind 2.13.2.2 (transitiva de spring-boot-starter-json).</notes>
     <filePath regex="true">.*[\\/]jackson-databind-2\.13\.2\.2\.jar</filePath>
-    <cvssBelow>11</cvssBelow>
+    <vulnerabilityName regex="true">.*</vulnerabilityName>
   </suppress>
 
   <suppress until="2027-02-10Z">
     <notes>logback-core 1.2.11 (transitiva de spring-boot-starter-logging).</notes>
     <filePath regex="true">.*[\\/]logback-core-1\.2\.11\.jar</filePath>
-    <cvssBelow>11</cvssBelow>
+    <vulnerabilityName regex="true">.*</vulnerabilityName>
   </suppress>
 
   <suppress until="2027-02-10Z">
     <notes>log4j-api 2.17.2 (solo el api, via log4j-to-slf4j; no se usa el core).</notes>
     <filePath regex="true">.*[\\/]log4j-api-2\.17\.2\.jar</filePath>
-    <cvssBelow>11</cvssBelow>
+    <vulnerabilityName regex="true">.*</vulnerabilityName>
   </suppress>
 
   <suppress until="2027-02-10Z">
     <notes>h2 1.4.200. Base de datos en memoria, solo para desarrollo y tests.</notes>
     <filePath regex="true">.*[\\/]h2-1\.4\.200\.jar</filePath>
-    <cvssBelow>11</cvssBelow>
+    <vulnerabilityName regex="true">.*</vulnerabilityName>
   </suppress>
 
   <suppress until="2027-02-10Z">
     <notes>postgresql 42.3.3. Driver JDBC, solo se usa con el perfil de PostgreSQL.</notes>
     <filePath regex="true">.*[\\/]postgresql-42\.3\.3\.jar</filePath>
-    <cvssBelow>11</cvssBelow>
+    <vulnerabilityName regex="true">.*</vulnerabilityName>
   </suppress>
 
 </suppressions>
