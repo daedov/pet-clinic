@@ -33,11 +33,13 @@ flowchart LR
 | Job | `push` | `pull_request → main` | `schedule` |
 |---|---|---|---|
 | `build-and-test`, `dockerfile` | cualquier rama | ✔ | lunes 06:00 UTC |
-| `sca`, `image` | solo `main` | ✔ | lunes 06:00 UTC |
+| `sca` | `main` y `feature-pipeline` | ✔ | lunes 06:00 UTC |
+| `image` | solo `main` | ✔ | lunes 06:00 UTC |
 | `sast` | solo `main` | ✔ | lunes 06:30 UTC |
 
 - `Schedule semanal`: el análisis por evento no detecta CVEs publicadas después del último commit.
 - `build-and-test`/`dockerfile` en todas las ramas: dan feedback temprano.
+- `sca` corre además en `feature-pipeline`, la rama de desarrollo del pipeline, para no depender de un PR al validarlo. `image` sigue acotado a `main` y a los PR.
 - `concurrency` + `cancel-in-progress` cancela runs previos de la misma rama
 - `paths-ignore` evita disparar el pipeline al editar markdown.
 
