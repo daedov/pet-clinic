@@ -61,7 +61,7 @@ jobs:
   sast:
     name: SAST (CodeQL)
     runs-on: ubuntu-latest
-    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature-pipeline'
     timeout-minutes: 30
     permissions:
       contents: read
