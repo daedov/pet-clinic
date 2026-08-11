@@ -51,9 +51,11 @@ Ejecuta `./mvnw clean compile` y cubre ficheros Java de `src/main`, sin `package
 **Gate propio**: `sast` no falla por hallazgos — no tiene input de umbral, solo publica alertas en Code scanning y devuelve 0 (falla únicamente si el build o el upload se rompen). Por eso se escribe además el SARIF a disco y un paso posterior lo evalúa con jq contra THRESHOLD=4.0 sobre el security-severity de cada regla (7.0 = solo High/Critical; 9.0 = solo Critical).
 
 ### 4. SCA — OWASP Dependency-Check
-Descarga `app-jar`, resuelve dependencias contra la NVD (`--enableRetired`).
+Descarga `app-jar`, resuelve dependencias contra la NVD (`--enableRetired --disableCentral`).
 
 **Gate**: el default de `--failOnCVSS` es 11 (nunca falla, CVSS máximo es 10), por eso se fija explícito en `--failOnCVSS 4`, alineado al `THRESHOLD` del SAST. `image` depende de `sca` (`needs`), así que un gate en rojo también salta la etapa 6.
+
+**`--disableCentral`**: el Central Analyzer consulta `search.maven.org` y desde los runners de GitHub choca contra el rate limit. Tras 3 reintentos lanza una excepción y Dependency-Check aborta con código distinto de cero **antes** de evaluar el umbral: un rojo que no dice nada sobre seguridad (2 de 2 runs sin el flag). Desactivarlo no cambia la detección — al fallar, la herramienta lo apaga sola y continúa; los mismos 156 hallazgos ≥ 4.0 aparecen igual, y el job baja de 1049 s a menos de 2 minutos. El costo es perder el enriquecimiento con los POM de Maven Central, que puede aumentar falsos positivos y negativos.
 
 ### 5. Build de la imagen
 Descarga `app-jar` a `target/` (`COPY target/*.jar` en el Dockerfile), construye `spring-petclinic:${{ github.sha }}`. No se publica a ningún registry — Trivy la lee del daemon local, por eso comparte job con la etapa 6. Un futuro `docker push` iría después del gate 6.
