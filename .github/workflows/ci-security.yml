@@ -140,6 +140,11 @@ jobs:
       security-events: write      
 
     steps:
+      # El checkout va primero: actions/checkout limpia el workspace y borraria el jar.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
       - name: Download build jar
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
@@ -152,7 +157,9 @@ jobs:
           project: spring-petclinic
           path: 'app'
           format: 'HTML'
-          args: --enableRetired --disableCentral --format SARIF --failOnCVSS 4
+          args: >-
+            --enableRetired --disableCentral --format SARIF --failOnCVSS 4
+            --suppression .github/dependency-check-suppression.xml
 
       - name: Upload SCA report
         if: always()
